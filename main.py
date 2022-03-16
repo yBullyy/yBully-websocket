@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, Request, WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import pickle
 from tensorflow import keras
@@ -69,14 +69,17 @@ async def get_prediction(request: Request):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        preprocessed_data = preprocess([data])
-        predictions = model.predict(preprocessed_data)
-        predictions = predictions.tolist()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            preprocessed_data = preprocess([data])
+            predictions = model.predict(preprocessed_data)
+            predictions = predictions.tolist()
 
-        resp = json.dumps({'text':data,'confidence':float(predictions[0][0])})
-        await websocket.send_text(resp)
+            resp = json.dumps({'text':data,'confidence':float(predictions[0][0])})
+            await websocket.send_text(resp)
+    except WebSocketDisconnect:
+        print("Client Disconnected")
 
 if __name__ == '__main__':
     import uvicorn
