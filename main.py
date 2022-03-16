@@ -1,5 +1,6 @@
 import json
 from fastapi import FastAPI, Request, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 import pickle
 from tensorflow import keras
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -36,6 +37,14 @@ with open('tokenizer.pickle', 'rb') as handle:
 model = keras.models.load_model("model_bidir_lstm.h5")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def get():
