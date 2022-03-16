@@ -1,69 +1,60 @@
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import HTMLResponse
-import pickle
-import keras
-from keras.preprocessing.sequence import pad_sequences
 import json
+from fastapi import FastAPI, Request, WebSocket
+import pickle
+from tensorflow import keras
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import re
 
-app = FastAPI()
+
+CONTRACTION_MAP = {"ain't": 'is not', "aren't": 'are not', "can't": 'cannot', "can't've": 'cannot have', "'cause": 'because', "could've": 'could have', "couldn't": 'could not', "couldn't've": 'could not have', "didn't": 'did not', "doesn't": 'does not', "don't": 'do not', "hadn't": 'had not', "hadn't've": 'had not have', "hasn't": 'has not', "haven't": 'have not', "he'd": 'he would', "he'd've": 'he would have', "he'll": 'he will', "he'll've": 'he he will have', "he's": 'he is', "how'd": 'how did', "how'd'y": 'how do you', "how'll": 'how will', "how's": 'how is', "I'd": 'I would', "I'd've": 'I would have', "I'll": 'I will', "I'll've": 'I will have', "I'm": 'I am', "I've": 'I have', "i'd": 'i would', "i'd've": 'i would have', "i'll": 'i will', "i'll've": 'i will have', "i'm": 'i am', "i've": 'i have', "isn't": 'is not', "it'd": 'it would', "it'd've": 'it would have', "it'll": 'it will', "it'll've": 'it will have', "it's": 'it is', "let's": 'let us', "ma'am": 'madam', "mayn't": 'may not', "might've": 'might have', "mightn't": 'might not', "mightn't've": 'might not have', "must've": 'must have', "mustn't": 'must not', "mustn't've": 'must not have', "needn't": 'need not', "needn't've": 'need not have', "o'clock": 'of the clock', "oughtn't": 'ought not', "oughtn't've": 'ought not have', "shan't": 'shall not', "sha'n't": 'shall not', "shan't've": 'shall not have', "she'd": 'she would', "she'd've": 'she would have', "she'll": 'she will', "she'll've": 'she will have',
+    "she's": 'she is', "should've": 'should have', "shouldn't": 'should not', "shouldn't've": 'should not have', "so've": 'so have', "so's": 'so as', "that'd": 'that would', "that'd've": 'that would have', "that's": 'that is', "there'd": 'there would', "there'd've": 'there would have', "there's": 'there is', "they'd": 'they would', "they'd've": 'they would have', "they'll": 'they will', "they'll've": 'they will have', "they're": 'they are', "they've": 'they have', "to've": 'to have', "wasn't": 'was not', "we'd": 'we would', "we'd've": 'we would have', "we'll": 'we will', "we'll've": 'we will have', "we're": 'we are', "we've": 'we have', "weren't": 'were not', "what'll": 'what will', "what'll've": 'what will have', "what're": 'what are', "what's": 'what is', "what've": 'what have', "when's": 'when is', "when've": 'when have', "where'd": 'where did', "where's": 'where is', "where've": 'where have', "who'll": 'who will', "who'll've": 'who will have', "who's": 'who is', "who've": 'who have', "why's": 'why is', "why've": 'why have', "will've": 'will have', "won't": 'will not', "won't've": 'will not have', "would've": 'would have', "wouldn't": 'would not', "wouldn't've": 'would not have', "y'all": 'you all', "y'all'd": 'you all would', "y'all'd've": 'you all would have', "y'all're": 'you all are', "y'all've": 'you all have', "you'd": 'you would', "you'd've": 'you would have', "you'll": 'you will', "you'll've": 'you will have', "you're": 'you are', "you've": 'you have'}
+
+
+def expand_contractions(text, contraction_mapping=CONTRACTION_MAP):
+    text = text.split()
+    for i in range(len(text)):
+        word = text[i]
+        if word in contraction_mapping:
+            text[i] = contraction_mapping[word]
+    text = " ".join(text)
+    text = text.replace("'s",'')
+    return text
+
+def preprocess(data):
+    new_list = []
+    for text in data:
+        text = text.lower()
+        clean_text = re.sub(r'[^a-zA-Z0-9. ]','',expand_contractions(text))
+        new_list.append(clean_text)
+    final_text = pad_sequences(tokenizer.texts_to_sequences(new_list),maxlen = 30, padding='pre')
+    return final_text
+
 
 with open('tokenizer.pickle', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
-load_model = keras.models.load_model("model_bidir_lstm.h5")
-print(tokenizer)
-print(load_model)
+model = keras.models.load_model("model_bidir_lstm.h5")
 
-
-sentences = ['is a boy', 'you are good fucker']
-for sent in sentences:
-    text = pad_sequences(tokenizer.texts_to_sequences([sent]), maxlen=30, padding='pre')
-    print(text)
-    x = load_model.predict(text)
-    print(sent)
-    print(x)
-# print(tokenizer.texts_to_sequences(['is a boy', 'Fuck you']))
-# print(load_model.summary())
-
-
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var ws = new WebSocket("ws://localhost:8000/ws");
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
-</html>
-"""
-
+app = FastAPI()
 
 @app.get("/")
 async def get():
-    return HTMLResponse(html)
+    return { 'message': 'Welcome to yBully api !' }
+
+@app.post("/predict")
+async def get_prediction(request: Request):
+    body = await request.json()
+    preprocessed_data = preprocess(body['data'])
+    
+    predictions = model.predict(preprocessed_data)
+    predictions = predictions.tolist()
+
+    ans = []
+    for i, pred in enumerate(predictions):
+        ans.append({"text": body["data"][i], "confidence": pred[0]})
+    
+    return {'predictions': ans}
+
 
 
 @app.websocket("/ws")
@@ -71,11 +62,13 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
         data = await websocket.receive_text()
-        print(data)
-        text = pad_sequences(tokenizer.texts_to_sequences([data]), maxlen=30, padding='pre')
-        # print(text)
-        x = load_model.predict(text)
-        resp = json.dumps({'text':data,'confidence':float(x[0][0])})
-        # print(resp)
+        preprocessed_data = preprocess([data])
+        predictions = model.predict(preprocessed_data)
+        predictions = predictions.tolist()
+
+        resp = json.dumps({'text':data,'confidence':float(predictions[0][0])})
         await websocket.send_text(resp)
 
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
