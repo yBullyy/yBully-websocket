@@ -77,6 +77,7 @@ async def websocket_endpoint(websocket: WebSocket):
             predictions = predictions.tolist()
 
             resp = json.dumps({'text':data,'confidence':float(predictions[0][0])})
+            print(resp)
             await websocket.send_text(resp)
     except WebSocketDisconnect:
         print("Client Disconnected")
