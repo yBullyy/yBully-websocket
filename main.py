@@ -81,7 +81,3 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(resp)
     except WebSocketDisconnect:
         print("Client Disconnected")
-
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host="localhost", port=8000)
