@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, Request, WebSocket,WebSocketDisconnect
+from fastapi import FastAPI, WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import pickle
 from tensorflow import keras
@@ -49,22 +49,6 @@ app.add_middleware(
 @app.get("/")
 async def get():
     return { 'message': 'Welcome to yBully api !' }
-
-@app.post("/predict")
-async def get_prediction(request: Request):
-    body = await request.json()
-    preprocessed_data = preprocess(body['data'])
-    
-    predictions = model.predict(preprocessed_data)
-    predictions = predictions.tolist()
-
-    ans = []
-    for i, pred in enumerate(predictions):
-        ans.append({"text": body["data"][i], "confidence": pred[0]})
-    
-    return {'predictions': ans}
-
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
