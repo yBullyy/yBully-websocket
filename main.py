@@ -73,7 +73,7 @@ def preprocess(data):
 with open('tokenizer.pickle', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
-model = keras.models.load_model("model_bidir_lstm.h5")
+model = keras.models.load_model("model.h5")
 
 app = FastAPI()
 
