@@ -15,10 +15,10 @@ firebase-admin==5.2.0
 flatbuffers==2.0
 gast==0.5.3
 google-api-core==2.7.2
-google-api-python-client==2.46.0
+google-api-python-client==2.47.0
 google-auth==2.6.5
 google-auth-httplib2==0.1.0
-google-auth-oauthlib==0.4.6
+google-auth-oauthlib==0.5.1
 google-cloud-core==2.3.0
 google-cloud-firestore==2.4.0
 google-cloud-storage==2.3.0
@@ -68,7 +68,7 @@ starlette==0.17.1
 tensorboard==2.8.0
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
-tensorflow==2.8.0
+tensorflow-cpu==2.8.0
 tensorflow-io-gcs-filesystem==0.24.0
 termcolor==1.1.0
 tf-estimator-nightly==2.8.0.dev2021122109

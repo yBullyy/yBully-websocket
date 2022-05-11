@@ -6,11 +6,13 @@ from starlette.requests import Request
 from tensorflow import keras
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import re
-import requests
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from firebase_admin import storage
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from googleapiclient.http import MediaIoBaseDownload
 
 from rich.progress import (
     BarColumn,
@@ -113,18 +115,19 @@ def update_active_model(transaction,model_ref,model_version):
     transaction.update(active_model_ref,{'isActive':False})
     transaction.update(new_model_ref,{'isActive':True})
 
+SCOPES = ['https://www.googleapis.com/auth/drive']
+
+credentials = service_account.Credentials.from_service_account_file("./service_account.json",scopes=SCOPES)
+drive = build('drive', 'v3', credentials=credentials)
 
 def update_model(download_url,model_version):
     file_name = "model.h5"
-    with progress:
-        task_id = progress.add_task("download", filename=file_name, start=False)
-        with requests.get(download_url,stream=True) as r:
-            progress.update(task_id, total=int(len(r.content)))
-            with open(file_name, 'wb') as f:
-                progress.start_task(task_id)
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    progress.update(task_id, advance=len(chunk))
+    request = drive.files().get_media(fileId=download_url,supportsAllDrives=True)
+    with open(file_name,"wb") as fh:
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
     global model
     try:
         update_active_model(transaction,models_ref,model_version)
